@@ -81,6 +81,11 @@ def parse_file(f)
     nm_cmd = sprintf("%s %s %s", NM, NM_OPTS.join(' '), Shellwords::escape(f))
     `#{nm_cmd}`.lines.each{|l|
         case l.chomp
+            #0000000000b67000 A z_extract_offset
+            when /^[0-9a-fA-F]+\s+A\s+(.*)$/
+                s = $1
+                add_sym_def(f, s)
+
             #00000000 T _Z21GetNumberOfProcessorsv
             when /^[0-9a-fA-F]+\s+T\s+(.*)$/
                 s = $1
