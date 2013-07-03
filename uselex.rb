@@ -52,6 +52,8 @@ def usage
     exit 1
 end
 
+usage if ARGV.size == 0
+
 require 'set'
 require 'shellwords' # Shellwords::escape
 
