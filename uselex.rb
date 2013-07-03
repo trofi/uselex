@@ -131,7 +131,7 @@ def parse_file(f)
                 s = $1
                 add_sym_use(f, s)
             else
-                raise "unknown sym type: '#{l.chomp}'"
+                raise "#{f}: unknown sym type: '#{l.chomp}'"
         end
     }
 end
