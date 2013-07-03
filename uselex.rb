@@ -49,10 +49,8 @@ def usage
      Public domain.
  == The End ==
 "
-    exit 1
+    return 1
 end
-
-usage if ARGV.size == 0
 
 require 'set'
 require 'shellwords' # Shellwords::escape
@@ -141,15 +139,21 @@ def parse_file(f)
     }
 end
 
-ARGV.each{|f|
-    parse_file f
-}
+def main(argv)
+    return usage if argv.size == 0
 
+    argv.each{|f|
+        parse_file f
+    }
 
-$defined_sym_to_files.sort_by{|v| [v[1].to_a, v[0]] # module, symbol
-                             }.each{|s,d_files|
-    if $used_sym_to_files[s].nil?
-        #printf("%s: redundantly exported. no external users? (exported from: %s)\n", s, d_files.to_a.join(' '))
-        printf("%s: [R]: exported from: %s\n", s, d_files.to_a.join(' '))
-    end
-}
+    $defined_sym_to_files.sort_by{|v| [v[1].to_a, v[0]] # module, symbol
+                                 }.each{|s,d_files|
+        if $used_sym_to_files[s].nil?
+            #printf("%s: redundantly exported. no external users? (exported from: %s)\n", s, d_files.to_a.join(' '))
+            printf("%s: [R]: exported from: %s\n", s, d_files.to_a.join(' '))
+        end
+    }
+    return 0
+end
+
+exit main(ARGV) if __FILE__ == $0
