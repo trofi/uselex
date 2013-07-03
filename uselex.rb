@@ -57,7 +57,7 @@ usage if ARGV.size == 0
 require 'set'
 require 'shellwords' # Shellwords::escape
 
-# symbol => Set (files)
+# { symbol => Set (files) }
 $defined_sym_to_files = {}
 $used_sym_to_files = {}
 
@@ -145,7 +145,9 @@ ARGV.each{|f|
     parse_file f
 }
 
-$defined_sym_to_files.each{|s,d_files|
+
+$defined_sym_to_files.sort_by{|v| [v[1].to_a, v[0]] # module, symbol
+                             }.each{|s,d_files|
     if $used_sym_to_files[s].nil?
         #printf("%s: redundantly exported. no external users? (exported from: %s)\n", s, d_files.to_a.join(' '))
         printf("%s: [R]: exported from: %s\n", s, d_files.to_a.join(' '))
