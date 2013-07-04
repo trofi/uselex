@@ -15,7 +15,7 @@ def usage
 
  == USAGE ==
 
-    uselex.rb [file1.o ... ]
+    uselex.rb [ -w whitelist_file ] [ -x exported symbol ] [file1.o ... ]
 
  == USAGE EXAMPLE
 
@@ -43,6 +43,10 @@ def usage
     but for a binary it usually means lack of 'module-local' specifier
     ('static' keyword in C).
 
+ == TODO ==
+
+    Implement --debug / --verbose to get insight on what is going on.
+
  == REPORTING BUGS ==
 
      Maintainter: Sergei Trofimovich <slyfox@gentoo.org>
@@ -52,6 +56,7 @@ def usage
     return 1
 end
 
+require 'getoptlong'
 require 'set'
 require 'shellwords' # Shellwords::escape
 
@@ -158,11 +163,31 @@ def add_default_symbols(symbol_tracker)
     symbol_tracker.add_sym_use('<default>', 'main')
 end
 
-def main(argv)
-    return usage if argv.size == 0
+def add_whitelist(symbol_tracker, whitelist_file)
+    File.open(whitelist_file, "r"){|f|
+        f.each_line{|_l|
+            l = _l.chomp.strip
+            next if l match(/^#/) # skip starting from '#'
+            next if l == ""
+
+            symbol = l
+            symbol_tracker.add_sym_use("<whitelist:#{whitelist_file}>", symbol)
+        }
+    }
+end
+
+def main(config, argv)
+    return usage if argv.size == 0 or config[:print_usage]
 
     symbol_tracker = SymbolTracker.new
     add_default_symbols symbol_tracker
+
+    config[:whitelist_files].each{|wlf|
+        add_whitelist symbol_tracker, wlf
+    }
+    config[:exported_symbols].each{|x_sym|
+        symbol_tracker.add_sym_use("<exported:#{x_sym}>", x_sym)
+    }
 
     defined_sym_to_files, used_sym_to_files = symbol_tracker.parse_files argv
 
@@ -176,4 +201,37 @@ def main(argv)
     return 0
 end
 
-exit main(ARGV) if __FILE__ == $0
+config = { :whitelist_files  => [],
+           :exported_symbols => [],
+           :verbose          => 0,
+           :debug            => nil,
+           :print_usage      => nil,
+         }
+
+opts = GetoptLong.new(
+      [ '--help',          '-h', GetoptLong::NO_ARGUMENT ],
+      [ '--verbose',       '-v', GetoptLong::NO_ARGUMENT ],
+      [ '--version',       '-V', GetoptLong::NO_ARGUMENT ],
+      [ '--debug',         '-d', GetoptLong::NO_ARGUMENT ],
+      [ '--whitelist',     '-w', GetoptLong::REQUIRED_ARGUMENT ],
+      [ '--exported',      '-x', GetoptLong::REQUIRED_ARGUMENT ]
+      )
+
+opts.each{|opt, arg|
+    case opt
+        when '--help'
+            config[:print_usage] = true
+        when '--verbose'
+            config[:verbose] += 1
+        when '--debug'
+            config[:debug] = true
+        when '--version'
+            config[:show_version] = true
+        when '--whitelist'
+            config[:whitelist_files].push arg
+        when '--exported'
+            config[:exported_symbols].push arg
+    end
+}
+
+exit main(config, ARGV) if __FILE__ == $0
