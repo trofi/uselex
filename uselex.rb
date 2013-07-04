@@ -167,7 +167,7 @@ def add_whitelist(symbol_tracker, whitelist_file)
     File.open(whitelist_file, "r"){|f|
         f.each_line{|_l|
             l = _l.chomp.strip
-            next if l match(/^#/) # skip starting from '#'
+            next if l =~ /^#/ # skip starting from '#'
             next if l == ""
 
             symbol = l
