@@ -55,100 +55,120 @@ end
 require 'set'
 require 'shellwords' # Shellwords::escape
 
-# { symbol => Set (files) }
-$defined_sym_to_files = {}
-$used_sym_to_files = {}
+class SymbolTracker
+    def initialize
+        # { symbol => Set (files_defining_symbol) }
+        @defined_sym_to_files = {}
+        # { symbol => Set (files_using_symbol) }
+        @used_sym_to_files = {}
+    end
 
-def add_sym_def(f, sym)
-    $defined_sym_to_files[sym] ||= Set.new
+    def add_sym_def(f, sym)
+        @defined_sym_to_files[sym] ||= Set.new
 
-    $defined_sym_to_files[sym].add f
+        @defined_sym_to_files[sym].add f
+    end
+
+    def add_sym_use(f, sym)
+        @used_sym_to_files[sym] ||= Set.new
+
+        @used_sym_to_files[sym].add f
+    end
+
+    def parse_file(f)
+        nm_cmd = sprintf("%s %s %s", NM, NM_OPTS.join(' '), Shellwords::escape(f))
+        `#{nm_cmd}`.lines.each{|l|
+            case l.chomp
+                #0000000000b67000 A z_extract_offset
+                when /^[0-9a-fA-F]+\s+A\s+(.*)$/
+                    s = $1
+                    add_sym_def(f, s)
+
+                #00000000 T _Z21GetNumberOfProcessorsv
+                when /^[0-9a-fA-F]+\s+T\s+(.*)$/
+                    s = $1
+                    add_sym_def(f, s)
+
+                #00000000 W void __gnu_debug
+                when /^[0-9a-fA-F]+\s+W\s+(.*)$/
+                    s = $1
+                    add_sym_def(f, s)
+
+                #00000000 V void __gnu_debug
+                when /^[0-9a-fA-F]+\s+V\s+(.*)$/
+                    s = $1
+                    add_sym_def(f, s)
+
+                #         U __stack_chk_fail
+                when /^\s+U\s+(.*)$/
+                    s = $1
+                    add_sym_use(f, s)
+
+                #00000001 D scanner_config::is_corrupted
+                when /^[0-9a-fA-F]+\s+D\s+(.*)$/
+                    s = $1
+                    add_sym_def(f, s)
+
+                #00000000 u std::string
+                when /^[0-9a-fA-F]+\s+u\s+(.*)$/
+                    s = $1
+                    add_sym_def(f, s)
+
+                #00000000 B g_lObjCount
+                when /^[0-9a-fA-F]+\s+B\s+(.*)$/
+                    s = $1
+                    add_sym_def(f, s)
+
+                #00000000 R CLSID_CoVba32Ldr
+                when /^[0-9a-fA-F]+\s+R\s+(.*)$/
+                    s = $1
+                    add_sym_def(f, s)
+
+                #00002000 C g_CrcTable
+                when /^[0-9a-fA-F]+\s+C\s+(.*)$/
+                    s = $1
+                    add_sym_def(f, s)
+
+                #         w __pthread_key_create
+                when /^\s+w\s+(.*)$/
+                    s = $1
+                    add_sym_use(f, s)
+                else
+                    raise "#{f}: unknown sym type: '#{l.chomp}'"
+            end
+        }
+    end
+
+    def get_result
+        return @defined_sym_to_files, @used_sym_to_files
+    end
+
+    def parse_files(files)
+        files.each{|f|
+            parse_file f
+        }
+        return get_result
+    end
 end
 
-def add_sym_use(f, sym)
-    $used_sym_to_files[sym] ||= Set.new
-
-    $used_sym_to_files[sym].add f
-end
-
-# C++ stdlib
-add_sym_use('<default>', 'operator new(unsigned int, void*)')
-add_sym_use('<default>', 'main')
-
-def parse_file(f)
-    nm_cmd = sprintf("%s %s %s", NM, NM_OPTS.join(' '), Shellwords::escape(f))
-    `#{nm_cmd}`.lines.each{|l|
-        case l.chomp
-            #0000000000b67000 A z_extract_offset
-            when /^[0-9a-fA-F]+\s+A\s+(.*)$/
-                s = $1
-                add_sym_def(f, s)
-
-            #00000000 T _Z21GetNumberOfProcessorsv
-            when /^[0-9a-fA-F]+\s+T\s+(.*)$/
-                s = $1
-                add_sym_def(f, s)
-
-            #00000000 W void __gnu_debug
-            when /^[0-9a-fA-F]+\s+W\s+(.*)$/
-                s = $1
-                add_sym_def(f, s)
-
-            #00000000 V void __gnu_debug
-            when /^[0-9a-fA-F]+\s+V\s+(.*)$/
-                s = $1
-                add_sym_def(f, s)
-
-            #         U __stack_chk_fail
-            when /^\s+U\s+(.*)$/
-                s = $1
-                add_sym_use(f, s)
-
-            #00000001 D scanner_config::is_corrupted
-            when /^[0-9a-fA-F]+\s+D\s+(.*)$/
-                s = $1
-                add_sym_def(f, s)
-
-            #00000000 u std::string
-            when /^[0-9a-fA-F]+\s+u\s+(.*)$/
-                s = $1
-                add_sym_def(f, s)
-
-            #00000000 B g_lObjCount
-            when /^[0-9a-fA-F]+\s+B\s+(.*)$/
-                s = $1
-                add_sym_def(f, s)
-
-            #00000000 R CLSID_CoVba32Ldr
-            when /^[0-9a-fA-F]+\s+R\s+(.*)$/
-                s = $1
-                add_sym_def(f, s)
-
-            #00002000 C g_CrcTable
-            when /^[0-9a-fA-F]+\s+C\s+(.*)$/
-                s = $1
-                add_sym_def(f, s)
-
-            #         w __pthread_key_create
-            when /^\s+w\s+(.*)$/
-                s = $1
-                add_sym_use(f, s)
-            else
-                raise "#{f}: unknown sym type: '#{l.chomp}'"
-        end
-    }
+def add_default_symbols(symbol_tracker)
+    # C++ stdlib
+    symbol_tracker.add_sym_use('<default>', 'operator new(unsigned int, void*)')
+    # C executable
+    symbol_tracker.add_sym_use('<default>', 'main')
 end
 
 def main(argv)
     return usage if argv.size == 0
 
-    argv.each{|f|
-        parse_file f
-    }
+    symbol_tracker = SymbolTracker.new
+    add_default_symbols symbol_tracker
 
-    $defined_sym_to_files.sort_by{|v| [v[1].to_a, v[0]] # module, symbol
+    defined_sym_to_files, used_sym_to_files = symbol_tracker.parse_files argv
+
+    defined_sym_to_files.sort_by{|v| [v[1].to_a, v[0]] # module, symbol
                                  }.each{|s,d_files|
-        if $used_sym_to_files[s].nil?
+        if used_sym_to_files[s].nil?
             #printf("%s: redundantly exported. no external users? (exported from: %s)\n", s, d_files.to_a.join(' '))
             printf("%s: [R]: exported from: %s\n", s, d_files.to_a.join(' '))
         end
