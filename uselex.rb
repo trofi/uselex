@@ -88,58 +88,29 @@ class SymbolTracker
         nm_cmd = sprintf("%s %s %s", NM, NM_OPTS.join(' '), Shellwords::escape(f))
         `#{nm_cmd}`.lines.each{|l|
             case l.chomp
-                #0000000000b67000 A z_extract_offset
-                when /^[0-9a-fA-F]+\s+A\s+(.*)$/
-                    s = $1
-                    add_sym_def(f, s)
+                # symbol definitions:
 
-                #00000000 T _Z21GetNumberOfProcessorsv
-                when /^[0-9a-fA-F]+\s+T\s+(.*)$/
-                    s = $1
-                    add_sym_def(f, s)
-
-                #00000000 W void __gnu_debug
-                when /^[0-9a-fA-F]+\s+W\s+(.*)$/
-                    s = $1
-                    add_sym_def(f, s)
-
-                #00000000 V void __gnu_debug
-                when /^[0-9a-fA-F]+\s+V\s+(.*)$/
-                    s = $1
-                    add_sym_def(f, s)
-
-                #         U __stack_chk_fail
-                when /^\s+U\s+(.*)$/
-                    s = $1
-                    add_sym_use(f, s)
-
-                #00000001 D scanner_config::is_corrupted
-                when /^[0-9a-fA-F]+\s+D\s+(.*)$/
-                    s = $1
-                    add_sym_def(f, s)
-
-                #00000000 u std::string
-                when /^[0-9a-fA-F]+\s+u\s+(.*)$/
-                    s = $1
-                    add_sym_def(f, s)
-
-                #00000000 B g_lObjCount
-                when /^[0-9a-fA-F]+\s+B\s+(.*)$/
-                    s = $1
-                    add_sym_def(f, s)
-
-                #00000000 R CLSID_CoVba32Ldr
-                when /^[0-9a-fA-F]+\s+R\s+(.*)$/
-                    s = $1
-                    add_sym_def(f, s)
+                # A - absolute value
+                # B - uninit data section (BSS)
+                # C - common symbol
+                # D - init data section
+                # R - read-only section
+                # T - text section definition
+                # V - weak symbol
+                # W - weak symbol (untagged)
+                # u - unique global symbol
 
                 #00002000 C g_CrcTable
-                when /^[0-9a-fA-F]+\s+C\s+(.*)$/
+                when /^[0-9a-fA-F]+\s+[ABCDRTVWu]\s+(.*)$/
                     s = $1
                     add_sym_def(f, s)
 
+                # symbol users:
+                # U - undefined symbol
+                # w - weak symbol (untagged)
+
                 #         w __pthread_key_create
-                when /^\s+w\s+(.*)$/
+                when /^\s+[Uw]\s+(.*)$/
                     s = $1
                     add_sym_use(f, s)
                 else
