@@ -43,6 +43,10 @@ def usage
     but for a binary it usually means lack of 'module-local' specifier
     ('static' keyword in C).
 
+ == SIMILAR TOOLS ==
+
+    _very_ similar tridge's findstatic.pl: ftp://ftp.samba.org/pub/unpacked/junkcode/findstatic.pl
+
  == TODO ==
 
     Implement --debug / --verbose to get insight on what is going on.
