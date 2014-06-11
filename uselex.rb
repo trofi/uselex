@@ -11,7 +11,7 @@ def usage
 
  == USAGE ==
 
-    uselex.rb [ -w whitelist_file ] [ -x exported symbol ] [file1.o ... ]
+    uselex.rb [ -w whitelist_file ] [ -x exported symbol ] [ --nm-tool=name ] [file1.o ... ]
 
  == USAGE EXAMPLE
 
@@ -28,6 +28,7 @@ def usage
 
     Thus for bzip2 the follwoing will be quite accurate:
     $ uselex.rb `find /tmp/z/bzip2-1.0.6/ -name '*.o'` | egrep -v ^BZ2_
+    $ uselex.rb --nm-tool=i686-w64-mingw32-nm `find /tmp/z/bzip2-1.0.6/ -name '*.o'` | egrep -v ^BZ2_
 
  == THEORY OF OPERATION
 
@@ -191,7 +192,8 @@ opts = GetoptLong.new(
       [ '--version',       '-V', GetoptLong::NO_ARGUMENT ],
       [ '--debug',         '-d', GetoptLong::NO_ARGUMENT ],
       [ '--whitelist',     '-w', GetoptLong::REQUIRED_ARGUMENT ],
-      [ '--exported',      '-x', GetoptLong::REQUIRED_ARGUMENT ]
+      [ '--exported',      '-x', GetoptLong::REQUIRED_ARGUMENT ],
+      [ '--nm-tool',             GetoptLong::REQUIRED_ARGUMENT ]
       )
 
 opts.each{|opt, arg|
@@ -208,6 +210,8 @@ opts.each{|opt, arg|
             config[:whitelist_files].push arg
         when '--exported'
             config[:exported_symbols].push arg
+        when '--nm-tool'
+            config[:nm_tool] = arg
     end
 }
 
