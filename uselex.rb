@@ -2,10 +2,6 @@
 
 MY_NAME    = "uselex"
 MY_VERSION = "0.0.1"
-NM = 'nm'
-NM_OPTS = [ '-C', # demangle C++
-            '-g', # only extern symbols
-          ]
 
 def usage
     print "
@@ -65,11 +61,13 @@ require 'set'
 require 'shellwords' # Shellwords::escape
 
 class SymbolTracker
-    def initialize
+    def initialize(nm_tool, nm_args)
         # { symbol => Set (files_defining_symbol) }
         @defined_sym_to_files = {}
         # { symbol => Set (files_using_symbol) }
         @used_sym_to_files = {}
+        # path and args for symbol GNU 'nm' parser
+        @nm_tool, @nm_args = nm_tool, nm_args
     end
 
     def add_sym_def(f, sym)
@@ -85,7 +83,7 @@ class SymbolTracker
     end
 
     def parse_file(f)
-        nm_cmd = sprintf("%s %s %s", NM, NM_OPTS.join(' '), Shellwords::escape(f))
+        nm_cmd = sprintf("%s %s %s", @nm_tool, @nm_args.join(' '), Shellwords::escape(f))
         `#{nm_cmd}`.lines.each{|l|
             case l.chomp
                 # symbol definitions:
@@ -154,7 +152,7 @@ end
 def main(config, argv)
     return usage if argv.size == 0 or config[:print_usage]
 
-    symbol_tracker = SymbolTracker.new
+    symbol_tracker = SymbolTracker.new(config[:nm_tool], config[:nm_args])
     add_default_symbols symbol_tracker
 
     config[:whitelist_files].each{|wlf|
@@ -181,6 +179,10 @@ config = { :whitelist_files  => [],
            :verbose          => 0,
            :debug            => nil,
            :print_usage      => nil,
+           :nm_tool          => 'nm',
+           :nm_args          => [ '-C', # demangle C++
+                                  '-g', # only extern symbols
+                                ],
          }
 
 opts = GetoptLong.new(
