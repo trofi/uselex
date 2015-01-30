@@ -23,7 +23,7 @@ def usage
     exitValue: [R]: exported from: /tmp/z/bzip2-1.0.6/bzip2.o
 
     Here we see:
-    - BZ2_* false posities, as they are exported as a library interface
+    - BZ2_* false positives, as they are exported as a library interface
     - real redundant exports: blockSize100k, deleteOutputOnInterrupt, exitValue
 
     Thus for bzip2 the follwoing will be quite accurate:
