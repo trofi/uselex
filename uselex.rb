@@ -11,7 +11,7 @@ def usage
 
  == USAGE ==
 
-    uselex.rb [ -w whitelist_file ] [ -x exported symbol ] [ --nm-tool=name ] [file1.o ... ]
+    uselex.rb [ -w whitelist_file ] [ -m mask_file ] [ -x exported symbol ] [ --nm-tool=name ] [file1.o ... ]
 
  == USAGE EXAMPLE
 
@@ -69,6 +69,7 @@ class SymbolTracker
         @used_sym_to_files = {}
         # path and args for symbol GNU 'nm' parser
         @nm_tool, @nm_args = nm_tool, nm_args
+        @masks = []
     end
 
     def add_sym_def(f, sym)
@@ -81,6 +82,18 @@ class SymbolTracker
         @used_sym_to_files[sym] ||= Set.new
 
         @used_sym_to_files[sym].add f
+    end
+
+    def add_mask(sym)
+        @masks.insert(-1, sym)
+    end
+
+    def apply_masks(sym)
+        @masks.each{|mask|
+            if /#{mask}/.match(sym) != nil
+                add_sym_use("<mask:#{mask}>", sym)
+            end
+        }
     end
 
     def parse_file(f)
@@ -150,6 +163,17 @@ def add_whitelist(symbol_tracker, whitelist_file)
     }
 end
 
+def add_mask(symbol_tracker, mask_file)
+    File.open(mask_file, "r"){|f|
+        f.each_line{|_l|
+            l = _l.chomp.strip
+            next if l =~ /^#/ # skip starting from '#'
+            next if l == ""
+            symbol_tracker.add_mask(l)
+        }
+    }
+end
+
 def main(config, argv)
     return usage if argv.size == 0 or config[:print_usage]
 
@@ -159,6 +183,9 @@ def main(config, argv)
     config[:whitelist_files].each{|wlf|
         add_whitelist symbol_tracker, wlf
     }
+    config[:mask_files].each{|mf|
+        add_mask symbol_tracker, mf
+    }
     config[:exported_symbols].each{|x_sym|
         symbol_tracker.add_sym_use("<exported:#{x_sym}>", x_sym)
     }
@@ -167,6 +194,7 @@ def main(config, argv)
 
     defined_sym_to_files.sort_by{|v| [v[1].to_a, v[0]] # module, symbol
                                  }.each{|s,d_files|
+        symbol_tracker.apply_masks(s)
         if used_sym_to_files[s].nil?
             #printf("%s: redundantly exported. no external users? (exported from: %s)\n", s, d_files.to_a.join(' '))
             printf("%s: [R]: exported from: %s\n", s, d_files.to_a.join(' '))
@@ -176,6 +204,7 @@ def main(config, argv)
 end
 
 config = { :whitelist_files  => [],
+           :mask_files       => [],
            :exported_symbols => [],
            :verbose          => 0,
            :debug            => nil,
@@ -192,6 +221,7 @@ opts = GetoptLong.new(
       [ '--version',       '-V', GetoptLong::NO_ARGUMENT ],
       [ '--debug',         '-d', GetoptLong::NO_ARGUMENT ],
       [ '--whitelist',     '-w', GetoptLong::REQUIRED_ARGUMENT ],
+      [ '--mask',          '-m', GetoptLong::REQUIRED_ARGUMENT ],
       [ '--exported',      '-x', GetoptLong::REQUIRED_ARGUMENT ],
       [ '--nm-tool',             GetoptLong::REQUIRED_ARGUMENT ]
       )
@@ -208,6 +238,8 @@ opts.each{|opt, arg|
             config[:show_version] = true
         when '--whitelist'
             config[:whitelist_files].push arg
+        when '--mask'
+            config[:mask_files].push arg
         when '--exported'
             config[:exported_symbols].push arg
         when '--nm-tool'
