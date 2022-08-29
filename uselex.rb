@@ -50,7 +50,7 @@ def usage
 
  == REPORTING BUGS ==
 
-     Maintainter: Sergei Trofimovich <slyfox@gentoo.org>
+     Maintainter: Sergei Trofimovich <slyich@gmail.com>
      Public domain.
  == The End ==
 "
