@@ -110,10 +110,11 @@ class SymbolTracker
                 # T - text section definition
                 # V - weak symbol
                 # W - weak symbol (untagged)
+                # i - for ELF it's an indirect function (IFUNC)
                 # u - unique global symbol
 
                 #00002000 C g_CrcTable
-                when /^[0-9a-fA-F]+\s+[ABCDRTVWu]\s+(.*)$/
+                when /^[0-9a-fA-F]+\s+[ABCDRTVWiu]\s+(.*)$/
                     s = $1
                     add_sym_def(f, s)
 
